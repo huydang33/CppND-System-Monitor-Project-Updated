@@ -276,7 +276,7 @@ long LinuxParser::UpTime(int pid)
   if (filestream.is_open()) {
     std::getline(filestream, line);
     std::istringstream linestream(line);
-    for (int i = 0; i<22; ++i)
+    for (int i = 0; i < 22; ++i)
     {
       linestream >> uptime;
     }
