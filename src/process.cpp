@@ -30,7 +30,7 @@ float Process::CpuUtilization()
     long seconds = upTime - (startTime / hertz);
 
     if (seconds > 0) {
-        return ((totalTime / hertz) / seconds);
+        return (static_cast<float>(totalTime) / hertz) / seconds;
     } else {
         return 0.0;
     }
