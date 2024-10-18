@@ -139,7 +139,6 @@ long LinuxParser::Jiffies()
 {
   long total = 0;
   vector<string> cpu_data = CpuUtilization();
-  std::cout << cpu_data[0] << std::endl;
   if (cpu_data.empty()) {
     return 0;  // Handle error if parsing fails
   }
@@ -178,7 +177,6 @@ long LinuxParser::IdleJiffies()
   for(int i = kIdle_; i <= kIOwait_; i++) {
     total += stol(cpu_data[i]);
   }
-  std::cout << total << std::endl;
   return total;
 }
 
