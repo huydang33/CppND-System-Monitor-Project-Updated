@@ -3,11 +3,16 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <filesystem>
 
 #include "linux_parser.h"
 
-#define STR_MEMTOTAL  "MemTotal:"
-#define STR_MEMFREE   "MemFree:"
+#define STR_MEMTOTAL      "MemTotal:"
+#define STR_MEMFREE       "MemFree:"
+#define UTIME_INDEX       13
+#define STIME_INDEX       14
+#define CUTIME_INDEX      15
+#define CSTIME_INDEX      16
 
 using std::stof;
 using std::string;
@@ -56,20 +61,19 @@ string LinuxParser::Kernel() {
 // BONUS: Update this to use std::filesystem
 vector<int> LinuxParser::Pids() {
   vector<int> pids;
-  DIR* directory = opendir(kProcDirectory.c_str());
-  struct dirent* file;
-  while ((file = readdir(directory)) != nullptr) {
-    // Is this a directory?
-    if (file->d_type == DT_DIR) {
-      // Is every character of the name a digit?
-      string filename(file->d_name);
-      if (std::all_of(filename.begin(), filename.end(), isdigit)) {
+  for(const auto& entry: std::filesystem::directory_iterator(kProcDirectory))
+  {
+    if(entry.is_directory())
+    {
+      string filename = entry.path().filename().string();
+      if(all_of(filename.begin(), filename.end(), isdigit))
+      {
         int pid = stoi(filename);
-        pids.push_back(pid);
+        pids.emplace_back(pid);
       }
     }
   }
-  closedir(directory);
+
   return pids;
 }
 
@@ -162,7 +166,7 @@ long LinuxParser::ActiveJiffies(int pid)
     std::istringstream linestream(line);
     int i = 0;
     while (linestream >> value) {
-      if (i >= 13 && i <= 16) {
+      if (i == UTIME_INDEX || i == STIME_INDEX || i == CUTIME_INDEX || i == CSTIME_INDEX) {
         total += stol(value);
       }
       i++;
