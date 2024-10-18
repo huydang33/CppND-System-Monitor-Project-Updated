@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "linux_parser.h"
 
@@ -136,95 +137,67 @@ T ParseData(std::string file_name, std::string key)
 // TODO: Read and return the number of jiffies for the system
 long LinuxParser::Jiffies() 
 {
-  return ActiveJiffies() + IdleJiffies();
-}
-
-// TODO: Read and return the number of active jiffies for a PID
-// REMOVE: [[maybe_unused]] once you define the function
-long LinuxParser::ActiveJiffies(int pid) 
-{
-  long result = 0;
-  string line;
-  long utime, stime, cutime, cstime;
-
-  std::ifstream filestream(LinuxParser::kProcDirectory + to_string(pid) + LinuxParser::kStatFilename);
-  if (filestream.is_open()) 
-  {
-    std::getline(filestream, line);
-    std::istringstream linestream(line);
-    std::vector<std::string> values((std::istream_iterator<std::string>(linestream)), std::istream_iterator<std::string>());
-    
-    // Fields 14, 15, 16, and 17 correspond to utime, stime, cutime, and cstime respectively
-    utime = std::stol(values[13]);   // index 13 -> field 14 (utime)
-    stime = std::stol(values[14]);   // index 14 -> field 15 (stime)
-    cutime = std::stol(values[15]);  // index 15 -> field 16 (cutime)
-    cstime = std::stol(values[16]);  // index 16 -> field 17 (cstime)
-
-    result = utime + stime + cutime + cstime;
-  }
-  return result; 
-}
-
-// TODO: Read and return the number of active jiffies for the system
-long LinuxParser::ActiveJiffies() 
-{
+  long total = 0;
   vector<string> cpu_data = CpuUtilization();
+  std::cout << cpu_data[0] << std::endl;
   if (cpu_data.empty()) {
     return 0;  // Handle error if parsing fails
   }
 
   // Convert strings to long and sum the active jiffies:
   // Active jiffies = user + nice + system + irq + softirq + steal
-  long user = std::stol(cpu_data[0]);
-  long nice = std::stol(cpu_data[1]);
-  long system = std::stol(cpu_data[2]);
-  long irq = std::stol(cpu_data[5]);
-  long softirq = std::stol(cpu_data[6]);
-  long steal = std::stol(cpu_data[7]);
+  for(int i = kUser_; i <= kSteal_; i++) {
+    total += stol(cpu_data[i]);
+  }
 
-  return user + nice + system + irq + softirq + steal;
+  return total;
+}
+
+// TODO: Read and return the number of active jiffies for a PID
+// REMOVE: [[maybe_unused]] once you define the function
+long LinuxParser::ActiveJiffies(int pid) 
+{
+  return LinuxParser::Jiffies() + LinuxParser::IdleJiffies();
+}
+
+// TODO: Read and return the number of active jiffies for the system
+long LinuxParser::ActiveJiffies() 
+{
+  
 }
 
 // TODO: Read and return the number of idle jiffies for the system
 long LinuxParser::IdleJiffies() 
 {
+  long total = 0;
   vector<string> cpu_data = CpuUtilization();
   if (cpu_data.empty()) {
     return 0;  // Handle error if parsing fails
   }
 
-  // Convert strings to long and sum the idle jiffies:
-  // Idle jiffies = idle + iowait
-  long idle = std::stol(cpu_data[3]);
-  long iowait = std::stol(cpu_data[4]);
-
-  return idle + iowait;
+  for(int i = kIdle_; i <= kIOwait_; i++) {
+    total += stol(cpu_data[i]);
+  }
+  std::cout << total << std::endl;
+  return total;
 }
 
 // TODO: Read and return CPU utilization
 vector<string> LinuxParser::CpuUtilization() 
 {
-  string line, cpu;
-  vector<string> cpu_data;
-  std::ifstream filestream(LinuxParser::kProcDirectory + LinuxParser::kStatFilename);
-  
-  while (std::getline(filestream, line)) 
-  {
+  string value, line;
+  vector<string> cpuValues;
+  std::ifstream stream(kProcDirectory + kStatFilename);
+  if (stream.is_open()) {
+    std::getline(stream, line);
     std::istringstream linestream(line);
-    std::string key;
-    linestream >> key;
-    
-    // Filter only accept "cpu" line
-    if (key.substr(0, 3) != "cpu" && key != "intr" && key != "softirq") {
-      continue;
-    }
-    
-    // If line == "cpuxxx"
-    if (key.substr(0, 3) == "cpu") {
-      cpu_data.push_back(line);
+    while (linestream >> value) {
+      if (value != "cpu") {
+        cpuValues.push_back(value);
+      }
     }
   }
-  return cpu_data;
+  return cpuValues;
 }
 
 // TODO: Read and return the total number of processes
