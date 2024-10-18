@@ -3,7 +3,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include "process.h"
 #include "linux_parser.h"
@@ -25,10 +24,16 @@ float Process::CpuUtilization()
     long totalTime = LinuxParser::ActiveJiffies(pid);
     long startTime = LinuxParser::UpTime(pid);
     long upTime = LinuxParser::UpTime();
-    /* sysconf(_SC_CLK_TCK) is used to convert from Jiffies to second */
-    long seconds = upTime - (startTime / sysconf(_SC_CLK_TCK));
-    
-  return (totalTime / sysconf(_SC_CLK_TCK)) / seconds;
+    long hertz = sysconf(_SC_CLK_TCK);  // tick/sec
+
+    // Time for process run (second)
+    long seconds = upTime - (startTime / hertz);
+
+    if (seconds > 0) {
+        return ((totalTime / hertz) / seconds);
+    } else {
+        return 0.0;
+    }
 }
 
 // TODO: Return the command that generated this process

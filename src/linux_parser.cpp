@@ -147,19 +147,7 @@ T ParseData(std::string file_name, std::string key)
 // TODO: Read and return the number of jiffies for the system
 long LinuxParser::Jiffies() 
 {
-  long total = 0;
-  vector<string> cpu_data = CpuUtilization();
-  if (cpu_data.empty()) {
-    return 0;  // Handle error if parsing fails
-  }
-
-  // Convert strings to long and sum the active jiffies:
-  // Active jiffies = user + nice + system + irq + softirq + steal
-  for(int i = kUser_; i <= kSteal_; i++) {
-    total += stol(cpu_data[i]);
-  }
-
-  return total;
+  return LinuxParser::ActiveJiffies() + LinuxParser::IdleJiffies();
 }
 
 // TODO: Read and return the number of active jiffies for a PID
@@ -186,7 +174,21 @@ long LinuxParser::ActiveJiffies(int pid)
 // TODO: Read and return the number of active jiffies for the system
 long LinuxParser::ActiveJiffies() 
 {
-  return LinuxParser::Jiffies() + LinuxParser::IdleJiffies();
+  long total = 0;
+  vector<string> cpu_data = CpuUtilization();
+  if (cpu_data.empty()) {
+    return 0;  // Handle error if parsing fails
+  }
+
+  /* Active Jiffies: user + nice + system + irq + softirq + steal */
+  total += stol(cpu_data[kUser_]);
+  total += stol(cpu_data[kNice_]);
+  total += stol(cpu_data[kSystem_]);
+  total += stol(cpu_data[kIRQ_]);
+  total += stol(cpu_data[kSoftIRQ_]);
+  total += stol(cpu_data[kSteal_]);
+
+  return total;
 }
 
 // TODO: Read and return the number of idle jiffies for the system
@@ -198,9 +200,10 @@ long LinuxParser::IdleJiffies()
     return 0;  // Handle error if parsing fails
   }
 
-  for(int i = kIdle_; i <= kIOwait_; i++) {
-    total += stol(cpu_data[i]);
-  }
+  /* Idle Jiffies: idle + iowait */
+  total += stol(cpu_data[kIdle_]);
+  total += stol(cpu_data[kIOwait_]);
+
   return total;
 }
 

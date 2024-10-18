@@ -21,7 +21,9 @@ float Processor::Utilization()
         result = 0.0;
     }
     
-    result = float(activeDelta) / float(totalDelta); 
+    // Multi-cores CPU
+    int numCores = sysconf(_SC_NPROCESSORS_ONLN);  // number of CPU cores
+    result = (float(activeDelta) / float(totalDelta)) * numCores;
 
     return result;
 }
