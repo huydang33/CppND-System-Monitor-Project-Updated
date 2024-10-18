@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <string>
 #include <vector>
-#include <iostream>
+#include <sstream>
 
 #include "linux_parser.h"
 
@@ -112,26 +112,36 @@ template<typename T>
 T ParseData(std::string file_name, std::string key)
 {
   string line;
-  string key_;
-  T value;
+  string key_, value;
   std::ifstream filestream(LinuxParser::kProcDirectory + file_name); // streams from this file
+  // Checks if the file is open
   if (filestream.is_open()) 
-  { 
-    // Checks if the file is open
+  {
+    // Executes upto the last line
     while (std::getline(filestream, line)) 
     { 
-      // Executes upto the last line
-      std::istringstream linestream(line); // reads a string until whitespace is reached (<sstream> lib)
+      // reads a string until whitespace is reached (<sstream> lib)
+      std::istringstream linestream(line);
       while (linestream >> key_ >> value) 
-      { 
+      {
         // extracts the keys and values. Here we need only the 1st and 2nd strings
         if (key_ == key) {
-          return value;
+          if constexpr (std::is_same<T, int>::value) {
+            return std::stoi(value);  //change to int
+          } else if constexpr (std::is_same<T, long>::value) {
+              return std::stol(value);  // change to long
+          } else if constexpr (std::is_same<T, float>::value) {
+              return std::stof(value);  // change to float
+          } else if constexpr (std::is_same<T, string>::value) {
+              return value;  // change to string
+          } else {
+              throw std::invalid_argument("Unsupported type");
+          }
         }
       }
     }
   }
-  return value;
+  return T();
 }
 
 // TODO: Read and return the number of jiffies for the system
@@ -156,13 +166,27 @@ long LinuxParser::Jiffies()
 // REMOVE: [[maybe_unused]] once you define the function
 long LinuxParser::ActiveJiffies(int pid) 
 {
-  return LinuxParser::Jiffies() + LinuxParser::IdleJiffies();
+  long total = 0;
+  string value, line;
+  std::ifstream stream(kProcDirectory + to_string(pid) + kStatFilename);
+  if (stream.is_open()) {
+    std::getline(stream, line);
+    std::istringstream linestream(line);
+    int i = 0;
+    while (linestream >> value) {
+      if (i >= 13 && i <= 16) {
+        total += stol(value);
+      }
+      i++;
+    }
+  }
+  return total;
 }
 
 // TODO: Read and return the number of active jiffies for the system
 long LinuxParser::ActiveJiffies() 
 {
-  
+  return LinuxParser::Jiffies() + LinuxParser::IdleJiffies();
 }
 
 // TODO: Read and return the number of idle jiffies for the system
@@ -201,7 +225,7 @@ vector<string> LinuxParser::CpuUtilization()
 // TODO: Read and return the total number of processes
 int LinuxParser::TotalProcesses() 
 {
-  return ParseData<int>(LinuxParser::kStatFilename, "process");
+  return ParseData<int>(LinuxParser::kStatFilename, "processes");
 }
 
 // TODO: Read and return the number of running processes
@@ -230,7 +254,7 @@ string LinuxParser::Command(int pid)
 // REMOVE: [[maybe_unused]] once you define the function
 string LinuxParser::Ram(int pid) 
 {
-  return to_string(ParseData<int>(to_string(pid) + LinuxParser::kStatusFilename, "VmRSS") / 1000); 
+  return to_string(ParseData<int>(to_string(pid) + LinuxParser::kStatusFilename, "VmRSS:") / 1000); 
 }
 
 // TODO: Read and return the user ID associated with a process
